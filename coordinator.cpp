@@ -241,8 +241,8 @@ int main(int argc, char* argv[]) {
     }
 
     // 输出总结果
-    cout << "Total Result = " << totalResult << endl;   
-    std::cout<<"所有线程完成"<<std::endl;
+    cout << totalResult << endl;   
+    // std::cout<<"所有线程完成"<<std::endl;
 
     
     close(sockfd);

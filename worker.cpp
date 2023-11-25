@@ -10,6 +10,12 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include "CurlEasyPtr.h" 
+#include <arpa/inet.h>
+#include <chrono>
+#include <thread>
+
+
+
 using namespace std;
 using namespace std::literals;
 /// Worker process that receives a list of URLs and reports the result
@@ -25,6 +31,11 @@ void error(const char* msg) {
 }
 
 int connectToCoordinator(const char* hostname, const char* port) {
+    int maxAttempts = 3;  // 最大尝试次数
+    int attempt = 0;      // 当前尝试次数
+
+    while (attempt < maxAttempts) {
+
     struct addrinfo hints, *res = nullptr, *p;
     int status;
     int sockfd = -1;
@@ -35,38 +46,71 @@ int connectToCoordinator(const char* hostname, const char* port) {
 
     if ((status = getaddrinfo(hostname, port, &hints, &res)) != 0) {
         std::cerr << "getaddrinfo error: " << gai_strerror(status) << std::endl;
-        return -1;
+
+        attempt++;
+        continue; // 如果 getaddrinfo 失败，则重试    
     }
 
     // 尝试连接到第一个可用的结果
     for (p = res; p != NULL; p = p->ai_next) {
+        char ipstr[INET6_ADDRSTRLEN];
+        void *addr;
+
+        // check if the address is IPv4 or IPv6
+        if (p->ai_family == AF_INET) { // IPv4
+            struct sockaddr_in *ipv4 = (struct sockaddr_in *)p->ai_addr;
+            addr = &(ipv4->sin_addr);
+        } else { // IPv6
+            struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *)p->ai_addr;
+            addr = &(ipv6->sin6_addr);
+        }
+        // convert the IP to a string and print it:
+        inet_ntop(p->ai_family, addr, ipstr, sizeof ipstr);
+        // std::cout << "Worker trying to connect to " << ipstr << std::endl;
+
+
+
         if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
             perror("worker: socket");
             continue;
         }
 
-        if (connect(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
-            close(sockfd);
-            perror("worker: connect");
-            sockfd = -1; // 这一步很重要
-            continue;
+        // if (connect(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
+        //     close(sockfd);
+        //     perror("worker: connect");
+        //     sockfd = -1; // 这一步很重要
+        //     freeaddrinfo(res); 
+        //     continue;
+        // }
+
+        if (connect(sockfd, p->ai_addr, p->ai_addrlen) != -1) {
+            freeaddrinfo(res); // 连接成功，释放资源并返回 socket
+            return sockfd;
         }
 
-        break; // 如果我们到这里，说明我们已经成功连接
+        close(sockfd); // 连接失败，关闭 socket 并尝试下一个地址
+        // break; // 如果我们到这里，说明我们已经成功连接
     }
 
-    if (p == NULL) {
-        std::cerr << "worker: failed to connect\n";
-        sockfd = -2;
-    }
+    // if (p == NULL) {
+    //     std::cerr << "worker: failed to connect\n";
+    //     sockfd = -2;
+    //     continue;
+    // }
 
     if (res != nullptr) {
         freeaddrinfo(res); // 确保在任何退出点释放资源
     }
+    // freeaddrinfo(res);
+    attempt++;
+    // return sockfd;
+    std::this_thread::sleep_for(std::chrono::seconds(1)); // 等待 1 秒再重试
 
-
-    return sockfd;
+    }
+    return -1;
 }
+
+    
 
 
 ssize_t processUrl(const std::string& url) {

@@ -69,6 +69,7 @@ void distributeWork(int workerSocket, const vector<string>& urls) {
         lock_guard<mutex> lock(resultMutex);
         totalResult += localTotalResult;
     }
+
         
     close(workerSocket);
 }
@@ -196,7 +197,7 @@ int main(int argc, char* argv[]) {
         // std::cout<<"currentWorkerIndex 2:"<<currentWorkerIndex<< std::endl;
 
 
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::this_thread::sleep_for(std::chrono::seconds(2));
 
 
         close(newsockfd);
@@ -241,7 +242,7 @@ int main(int argc, char* argv[]) {
     }
 
     // 输出总结果
-    cout << totalResult << endl;   
+    std::cout << totalResult;   
     // std::cout<<"所有线程完成"<<std::endl;
 
     

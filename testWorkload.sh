@@ -14,12 +14,12 @@ traceIO() {
 
 # Spawn the coordinator process
 traceIO trace0.txt \
-  cmake-build-debug/coordinator "$1" 4242 &
+  cmake-build-debug/coordinator "$1" 12345 &
 
 # Spawn some workers
 for i in {1..4}; do
   traceIO "trace$i.txt" \
-    cmake-build-debug/worker "localhost" "4242" &
+    cmake-build-debug/worker "localhost" "12345" &
 done
 
 # And wait for completion

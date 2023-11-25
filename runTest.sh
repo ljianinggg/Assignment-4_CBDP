@@ -11,11 +11,12 @@ test -f "$1" || (echo "\"$1\": No such file or directory" && exit 1)
 data/splitCSV.sh "$1"
 
 # Spawn the coordinator process
-cmake-build-debug/coordinator "file://$(dirname "$(realpath "$1")")/filelist.csv" 4242 &
+cmake-build-debug/coordinator "file://$(dirname "$(realpath "$1")")/filelist.csv" 12345 &
+# cmake-build-debug/coordinator "./data/filelist.csv" 4242 &
 
 # Spawn some workers
 for _ in {1..4}; do
-  cmake-build-debug/worker "localhost" "4242" &
+  cmake-build-debug/worker "localhost" "12345" &
 done
 
 # And wait for completion
